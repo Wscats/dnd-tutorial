@@ -1,196 +1,384 @@
-# 认识Node.js
-- Node 是一个服务器端 JavaScript 解释器
-- Node.js 是一个基于 Chrome V8 引擎的 JavaScript 运行环境
-- Node.js 使用了一个事件驱动、非阻塞式 I/O 的模型，使其轻量又高效
-- Node.js 的包管理器 npm，是全球最大的开源库生态系统
-- Node.js 是一门动态语言，运行在服务端的 Javascript
+# 拖拽实现方式
 
-# 版本介绍
-- 在命令窗口中输入 node -v 可以查看版本
-- 0.x 完全不技术 ES6
-- 4.x 部分支持 ES6 特性
-- 5.x 部分支持ES6特性（比4.x多些），属于过渡产品，现在来说应该没有什么理由去用这个了
-- 6.x 支持98%的 ES6 特性
-- 8.x 支持 ES6 特性
+实现元素拖放的两种方式：
 
-# 环境搭建
-- Node官网[下载安装文件](https://nodejs.org/en/download/)
-- 下载完后进行安装，建议安装到默认路径，注意不要有中文路径
-- 配置环境变量
-- 在命令窗口中输入 node -v，如果正常显示版本号则表示安装成功
+- 传统方式 mouseEvent 实现：通过监听鼠标事件，获取元素移动的位置，计算并赋值到目标位置上，依赖 position 的定位样式
+- HTML5方式 dragEvent 实现：HTML5 中提供了直接拖放的 API，极大的方便我们实现拖放效果，只需要通过监听元素的拖放事件就能实现各种拖放功能。想要拖放某个元素，必须设置该元素的 draggable 属性为 true 目标
 
-# REPL(交互式解释器)
-在命令窗口输入 node 后回车，便可进入到 REPL 模式，在这个模式里可以输入 Javascript 的脚本语法，node 会自动将语法执行。类似于在浏览器的开发人员工具的控制台。不同的在于 REPL 是在服务端解析 Javascript，而控制台是在客户端解析 Javascript。按 CTRL + C 可退出 REPL 模式。
+优劣势：
 
-# 运行Node.js
-REPL 只适用于一些简单的 Javascript 语法，对于稍复杂的程序，可以直接写到 js 文件当中。在前端可以直接在 html 页面中通过 script 标签引入 js 然后在浏览器运行，则可以通过浏览器来解析 js 文件。在 node 环境下，可通过命令窗口输入命令： node *.js ，便可直接执行 js 文件。
+- HTML5 拖放允许在浏览器外部拖动与其他应用程序交互。
+- 传统方式兼容性高
+- HTML5 拖放偏向数据传输，传统方式偏向元素移动
 
-> Chrome浏览器 = NodeJS(控制台,JS) + 界面(HTML,CSS)
+`dragEvent` 兼容性
 
-> Nodejs想做一件事情，把浏览器的JS引擎拿出来，放到世界上任何设备上来跑JS
+https://developer.mozilla.org/en-US/docs/Web/API/DragEvent
 
-# Node.js模块
-模块系统是 Node.js 最基本也是最常用的。一般情况模块可分为四类：
-- 原生模块
-- 文件模块
-- 第三方模块
-- 自定义模块
+![image](https://user-images.githubusercontent.com/17243165/128323939-00d35c85-602a-4ecb-8252-723beb6c98c6.png)
 
-以前我们在JS里面实现模块，有以下几种方案
+`mouseEvent` 兼容性
 
-1. 顺序问题，分开每一个JS去使用
-```html
-<script src="./lib/jquery.js"></script>
-<script src="./lib/common.js"></script>
-<script src="./lib/core.js"></script>
+https://developer.mozilla.org/en-US/docs/Web/API/Element/mouseenter_event
+
+![image](https://user-images.githubusercontent.com/17243165/128467894-fce04ece-b61b-40af-9262-90832c78bb3e.png)
+
+
+# 飞书(基于HTML5方式实现)
+
+代码搜索关键词 `dnd-preview__holder`
+
+使用 `addEventListeners` 监听全局 `window`
+
+```js
+e.prototype.setup = function () {
+    if (void 0 !== this.window) {
+        if (this.window.__isReactDndBackendSetUp) throw new Error('Cannot have two HTML5 backends at the same time.');
+        (this.window.__isReactDndBackendSetUp = !0), this.addEventListeners(this.window);
+    }
+};
 ```
-它会全局污染，就比如jquery如果引入两次，那最后一次会覆盖前面的那一份，原因是因为jquery是把$挂载到全局的window上面
 
-2. requirejs
-这种是前端模块化，需要额外引入一份`requirejs`去管理其他JS
+![image](https://user-images.githubusercontent.com/17243165/128457893-977f9050-49ad-4012-b929-25f3ae37f2da.png)
 
-3. ES5
-- 导出`module.exports`
-- 导入`require`
+上面这段代码可以看出使用了 [`react-dnd`](https://github.com/react-dnd/react-dnd/blob/e8bd6436548d96f6d6594f763752f424c2e0834b/packages/backend-html5/src/HTML5BackendImpl.ts)
 
-4. ES6
-- 导出`export`
-- 导入`import`
+监听了很多方法，这里把被拖放的元素称为`源对象`，被经过的元素称为`过程对象`，到达的元素称为目标对象，不同的对象产生不同的拖放事件，在所有拖放事件中提供了一个数据传递对象 dataTransfer，用于在源对象和目标对象间传递数据，它包含了一些方法及属性。包括了 setData()、getData()、clearData()方法来操作拖拽过程中传递的数据，setDragImage(）方法来设置拖拽时鼠标的下面的图片默认为被拖拽元素，effectAllowed 和 dropEffect 属性来设置拖放效果。
 
-## 自定义模块
-1. 创建模块(b.js)
-```javascript
-//b.js
-function FunA(){
-    return 'Tom';
+```js
+e.prototype.addEventListeners = function (e) {
+    e.addEventListener &&
+        (e.addEventListener('dragstart', this.handleTopDragStart),
+        e.addEventListener('dragstart', this.handleTopDragStartCapture, !0),
+        e.addEventListener('dragend', this.handleTopDragEndCapture, !0),
+        e.addEventListener('dragenter', this.handleTopDragEnter),
+        e.addEventListener('dragenter', this.handleTopDragEnterCapture, !0),
+        e.addEventListener('dragleave', this.handleTopDragLeaveCapture, !0),
+        e.addEventListener('dragover', this.handleTopDragOver),
+        e.addEventListener('dragover', this.handleTopDragOverCapture, !0),
+        e.addEventListener('drop', this.handleTopDrop),
+        e.addEventListener('drop', this.handleTopDropCapture, !0));
+};
+e.prototype.removeEventListeners = function (e) {
+    e.removeEventListener &&
+        (e.removeEventListener('dragstart', this.handleTopDragStart),
+        e.removeEventListener('dragstart', this.handleTopDragStartCapture, !0),
+        e.removeEventListener('dragend', this.handleTopDragEndCapture, !0),
+        e.removeEventListener('dragenter', this.handleTopDragEnter),
+        e.removeEventListener('dragenter', this.handleTopDragEnterCapture, !0),
+        e.removeEventListener('dragleave', this.handleTopDragLeaveCapture, !0),
+        e.removeEventListener('dragover', this.handleTopDragOver),
+        e.removeEventListener('dragover', this.handleTopDragOverCapture, !0),
+        e.removeEventListener('drop', this.handleTopDrop),
+        e.removeEventListener('drop', this.handleTopDropCapture, !0));
+};
+```
+
+当滑动的时候 `handleTopDragStart` 触发，然后使用 `getEventClientOffset ` 方法获取 `r` 里面包含 `x` 和 `y` 的坐标
+
+![image](https://user-images.githubusercontent.com/17243165/127980263-1d446b75-240b-46d2-9d5e-b31da0170e5a.png)
+
+```js
+e.prototype.handleTopDragStart = function (e) {
+    var t = this,
+        n = this.dragStartSourceIds;
+    this.dragStartSourceIds = null;
+    var r = c.getEventClientOffset(e);
+    this.monitor.isDragging() && this.actions.endDrag(),
+        this.actions.beginDrag(n || [], {
+            publishSource: !1,
+            getSourceClientOffset: this.getSourceClientOffset,
+            clientOffset: r,
+        });
+};
+```
+
+当拿到坐标之后会使用 `this.actions.beginDrag` 方法通信三个参数，通过 `redux` 通信数据
+
+-   publishSource
+-   getSourceClientOffset
+-   clientOffset
+
+![image](https://user-images.githubusercontent.com/17243165/127982506-1508c57a-bf03-468e-b8f6-7333d9dca490.png)
+
+![image](https://user-images.githubusercontent.com/17243165/127981923-1d495663-858e-4839-878c-e670b93481ec.png)
+
+```js
+(r.prototype.handleChange = function () {
+    if (this.isCurrentlyMounted) {
+        var e = this.getCurrentState();
+        d(e, this.state) || this.setState(e);
+    }
+}),
+    (r.prototype.getCurrentState = function () {
+        var t = this.manager.getMonitor();
+        return e(t, this.props);
+    });
+```
+
+![image](https://user-images.githubusercontent.com/17243165/127990512-0e4f930e-a9c9-4f26-b1e7-289a83c0cee7.png)
+
+然后通过 `d(e, this.state) || this.setState(e)` 做对比判断是否发生了变化，然后执行 `setState` 来触发 `render` 更新，这里会根据 `isVisible` 来决定拖拽组件是否需要显示
+
+```js
+{
+    key: "render",
+    value: function() {
+        if (!this.isVisible)
+            return null;
+        var e = this.props.currentOffset || {
+            x: 0,
+            y: 0
+        }
+            , n = e.x
+            , t = e.y
+            , r = this.item;
+        return _.a.createElement("div", {
+            className: "dnd-preview__holder",
+            style: {
+                transform: "translate(".concat(n, "px, ").concat(t, "px)")
+            }
+        }, _.a.createElement(j, null, _.a.createElement(k, null, this.icon, r && r.is_shortcut && _.a.createElement(A.u, null)), _.a.createElement(R, {
+            className: "ellipsis"
+        }, this.name)), this.renderMultipleSelection())
+    }
 }
-//暴露方法 FunA
-module.exports = FunA;
-```
-2. 加载模块(a.js)
-```javascript
-//a.js
-var FunA = require('./b.js');//得到 b.js => FunA
-var name = FunA();// 运行 FunA，name = 'Tom'
-console.log(name); // 输出结果
 ```
 
-### module.exports
-module.exports 就 Node.js 用于对外暴露，或者说对外开放指定访问权限的一个对象。如上面的案例，如果没有这段代码
-```javascript
-module.exports = FunA;
+![image](https://user-images.githubusercontent.com/17243165/128208497-9261be91-8584-40a5-a577-da298ee6f058.png)
+
+# 金山(基于传统方式实现)
+
+代码搜索关键词 `yun-list__dragicon`
+
+![image](https://user-images.githubusercontent.com/17243165/128281345-47677dd2-2f58-421d-bec8-d2911727d71f.png)
+
+使用的是 `mousedown`，`mousemove` 和 `mouseup` 配合实现
+
+-   onDocUp
+-   onDocMove
+-   onDown
+
+```ts
+onDown: function(e, t) {
+    this.sx = e.clientX,
+    this.sy = e.clientY,
+    this.curItem = t,
+    this.setItemRectCache([].concat((0,
+    i.default)(document.getElementsByClassName(this.dropClassName))), "dropCache"),
+    document.addEventListener("mousemove", this.onDocMove),
+    document.addEventListener("mouseup", this.onDocUp)
+},
+onDocMove: function(e) {
+    var t = e.clientX
+        , n = e.clientY;
+    (Math.abs(t - this.sx) > 5 || Math.abs(n - this.sy) > 5) && (this.draging = !0,
+    this.setDropItem(e, t, n),
+    this.setIconPos(t, n))
+},
+onDocUp: function(e) {
+    this.draging = !1,
+    this.setOutDrop(e),
+    document.removeEventListener("mousemove", this.onDocMove),
+    document.removeEventListener("mouseup", this.onDocUp)
+},
 ```
-那么 require('./b.js') 就会为 undefined。
-一个模块中有且仅有一个 module.exports，如果有多个那后面的则会覆盖前面的。
 
-### exports
-exports 是 module 对象的一个属性，同时它也是一个对象。在很多时候一个 js 文件有多个需要暴露的方法或是对象，module.exports 又只能暴露一个，那这个时候就要用到 exports:
-```javascript
-function FunA(){
-    return 'Tom';
-}
+![image](https://user-images.githubusercontent.com/17243165/128287907-74829527-ed64-4e1b-b922-4417cbaae1c2.png)
 
-function FunB(){
-    return 'Sam';
-}
+`onDocMove` 阶段使用 `setIconPos` 去改变拖拽容器的位置
 
-exports.FunA = FunA;
-exports.FunB = FunB;
-```
-```javascript
-//FunA = exports,exports 是一个对象
-var FunA = require('./b.js');
-var name1 = FunA.FunA();// 运行 FunA，name = 'Tom'
-var name2 = FunA.FunB();// 运行 FunB，name = 'Sam'
-console.log(name1);
-console.log(name2);
-```
-当然在引入的时候也可以这样写
-```javascript
-//FunA = exports,exports 是一个对象
-var {FunA, FunB} = require('./b.js');
-var name1 = FunA();// 运行 FunA，name = 'Tom'
-var name2 = FunB();// 运行 FunB，name = 'Sam'
-console.log(name1);
-console.log(name2);
+![image](https://user-images.githubusercontent.com/17243165/128292221-85d11f4c-98ea-4909-a7b7-c7aff9e61901.png)
+
+分别有两个碰撞的检测，`setHoverItem` 检测跟自身的列表项，`setOutDrop` 检测左侧边栏的列表项
+
+```ts
+setIconPos: function(e, t) {
+    var n = this.$refs.icon;
+    if (this.$refs.icon) {
+        var i = this.iconSize
+            , a = this.draging
+            , r = this.curIndex
+            , o = this.droping
+            , c = (0,
+        s.default)(i, 2)
+            , u = c[0]
+            , l = c[1];
+        n.style.left = e - (u + 100) / 2 + "px",
+        n.style.top = t - l - 50 + "px",
+        n.style.cursor = !a || ~r || o ? "default" : "not-allowed"
+    }
+},
 ```
 
-# npm
+`onDocMove` 阶段使用 `setHoverItem` 去计算拖动到自身列表的那一行，循环列表的每一项，判断拖拽的滑块落在那一项中，所以这里也做了碰撞检测，拖拽到那一项用 `curIndex` 记录下来
 
-### 什么是 npm 脚本
-npm 允许在package.json文件里面，使用scripts字段定义脚本命令。package.json 里面的scripts 字段是一个对象。它的每一个属性，对应一段脚本。定义在package.json里面的脚本，就称为 npm 脚本。
+![image](https://user-images.githubusercontent.com/17243165/128298971-5b5eb0c2-158c-4b09-9148-28349cb7fe6e.png)
 
-查看当前项目的所有 npm 脚本命令，可以使用不带任何参数的npm run命令。
+```ts
+setHoverItem: function(e, t) {
+    for (var n = this.rectCache, i = !1, a = n.length - 1; a >= 0; a--) {
+        var r = n[a]
+            , s = r.x1
+            , o = r.y1
+            , c = r.x2
+            , u = r.y2
+            , l = r.index
+            , d = r.canDrop;
+        if (e < c && e > s && t < u && t > o && d) {
+            this.curIndex = l,
+            i = !0;
+            break
+        }
+    }
+    !i && (this.curIndex = -1)
+},
+```
 
-### 使用
-- npm run 脚本名称
-- 如果是并行执行（即同时的平行执行），可以使用&符号。
-npm run script1.js & npm run script2.js
-- 如果是继发执行（即只有前一个任务成功，才执行下一个任务），可以使用&&符号。
-npm run script1.js && npm run script2.js
+当松开手的时候触发 `onDocUp` 事件，再使用 `setOutDrop` 实现碰撞检测，查看拖动文件和目标位置的相对坐标，来判断是否成功拖入
 
-### 简写形式
-- npm start 即 npm run start
-- npm stop 即 npm run stop 
-- npm test 即 npm run test
-- npm restart 即 npm run stop && npm run restart && npm run start
+![image](https://user-images.githubusercontent.com/17243165/128295039-337ee021-e364-40e5-bdd9-d55e4569b309.png)
 
+```ts
+setOutDrop: function(e) {
+    var t = this
+        , n = this.dropCache;
+    if (n && n.length && 1 === this.checkedKeys.length) {
+        var i = e.clientX
+            , a = e.clientY;
+        n.forEach(function(e) {
+            var n = e.x1
+                , r = e.y1
+                , s = e.x2
+                , o = e.y2
+                , c = e.index
+                , u = e.el
+                , l = e.height
+                , d = u.classList
+                , p = r + l / 2;
+            d.remove("dragover"),
+            d.remove("dragover-top"),
+            // ↓这里为碰撞检测
+            i < s && a > n && a < o && a > r && t.$emit("itemdrop", c, t.checkedKeys, 0 === c && a < p)
+        })
+    }
+    this.dropCache = null
+},
+```
 
-# forever
+空跑了 for 了来定位
 
-## forever 介绍
-forever是一个简单的命令式nodejs的守护进程，能够启动，停止，重启App应用。forever完全基于命令行操作，在forever进程之下，创建node的子进程，通过monitor监控node子进程的运行情况，一旦文件更新，或者进程挂掉，forever会自动重启node服务器，确保应用正常运行。
+![image](https://user-images.githubusercontent.com/17243165/128298094-418e096c-f445-4fed-a9d0-98ff90f834ef.png)
 
-## forever 安装
-- 全局安装forever npm install -g forever
-- 查看forever帮助 forever -h
+# 微云(基于传统方式实现)
 
-## forever 命令行的中文解释
-### 子命令actions：
+跟金山相似
 
-- start:启动守护进程
-- stop:停止守护进程
-- stopall:停止所有的forever进程
-- restart:重启守护进程
-- restartall:重启所有的foever进程
-- list:列表显示forever进程
-- config:列出所有的用户配置项
-- set <key> <val>: 设置用户配置项
-- clear <key>: 清楚用户配置项
-- logs: 列出所有forever进程的日志
-- logs <script|index>: 显示最新的日志
-- columns add <col>: 自定义指标到forever list
-- columns rm <col>: 删除forever list的指标
-- columns set<cols>: 设置所有的指标到forever list
-- cleanlogs: 删除所有的forever历史日志
+![image](https://user-images.githubusercontent.com/17243165/128318218-472967e3-fee9-42bc-a6b9-445fb289fc31.png)
 
-### forever 常用命令
-- forever start app.js
-- forever stop app.js
+https://git.woa.com/weiyun-web/wy/blob/master/vue-plugin/dragdrop.js
 
-### 配置参数options：
+![image](https://user-images.githubusercontent.com/17243165/128322155-4c9647a3-0b7b-44f4-bd74-0dd15717925b.png)
 
-- -m MAX: 运行指定脚本的次数
-- -l LOGFILE: 输出日志到LOGFILE
-- -o OUTFILE: 输出控制台信息到OUTFILE
-- -e ERRFILE: 输出控制台错误在ERRFILE
-- -p PATH: 根目录
-- -c COMMAND: 执行命令，默认是node
-- -a, –append: 合并日志
-- -f, –fifo: 流式日志输出
-- -n, –number: 日志打印行数
-- –pidFile: pid文件
-- –sourceDir: 源代码目录
-- –minUptime: 最小spinn更新时间(ms)
-- –spinSleepTime: 两次spin间隔时间
-- –colors: 控制台输出着色
-- –plain: –no-colors的别名，控制台输出无色
-- -d, –debug: debug模式
-- -v, –verbose: 打印详细输出
-- -s, –silent: 不打印日志和错误信息
-- -w, –watch: 监控文件改变
-- –watchDirectory: 监控顶级目录
-- –watchIgnore: 通过模式匹配忽略监控
-- -h, –help: 命令行帮助信息
+# 谷歌(暂无方式实现)
+
+无拖拽功能
 
 
+# React DND(基于HTML5方式实现)
+
+React DnD 的英文是 `Drag and Drop for React`
+
+React DnD 是 React 和 Redux 的核心作者 Dan Abramov 创造的一组 React 高阶组件，可以在保持组件分离的前提下帮助构建复杂的拖放接口
+
+两个 `react-dnd-html5-backend` 和 `react-dnd` 核心包的大小
+
+![image](https://user-images.githubusercontent.com/17243165/128459739-cca68440-777c-47b1-ac8c-30f04fa6dbf3.png)
+
+![image](https://user-images.githubusercontent.com/17243165/128459870-ee82de49-ea12-4888-a4eb-8d3ee201f9f4.png)
+
+
+
+![image](https://user-images.githubusercontent.com/17243165/128458938-a0926404-ee41-434a-9b0d-bb550c99e8d1.png)
+
+提供的接口
+
+-  exports.DndContext = DndContext;
+-  exports.DndProvider = DndProvider;
+-  exports.DragLayer = DragLayer;
+-  exports.DragPreviewImage = DragPreviewImage;
+-  exports.DragSource = DragSource;
+-  exports.DropTarget = DropTarget;
+-  exports.useDrag = useDrag;
+-  exports.useDragDropManager = useDragDropManager;
+-  exports.useDragLayer = useDragLayer;
+-  exports.useDrop = useDrop;
+
+
+# Dnd Core
+
+React-DnD 使用数据而不是视图作为事实来源，当在屏幕拖动某些东西的时候，并不是正在拖动组件或者 DOM 节点。而是通过数据模拟 preview 让拖动源正在被拖动。dnd-core正式围绕着数据为核心，并且React-DnD内部使用了 Redux
+
+ReactDnD 通过坐标形式的接口，来控制拖拽源的 preview 位置，如果判断可以落下再把拖拽源移动过去。
+
+配合边界函数和多数逻辑判断，封装了 dnd-core 核心逻辑数据驱动
+
+## 碰撞检测原理
+
+Dnd Core 的工具库里面封装了很多碰撞检测的工具函数
+
+确定两个笛卡尔坐标偏移是否相等
+
+![image](https://user-images.githubusercontent.com/17243165/128461968-98cdcae7-7d5b-4ba0-8ba7-c4ecd38a048b.png)
+
+返回拖动源组件位置的笛卡尔距离，基于其位置，计算当前拖动操作开始的时间，以及移动差异，如果没有被拖动的项目，则返回 null
+
+![image](https://user-images.githubusercontent.com/17243165/128462173-bcf295b1-ff00-4df5-a2dc-367d9b3d67d7.png)
+
+
+# 基本概念
+
+## Backends
+
+React DnD 抽象了后端的概念，我们可以使用 HTML5 拖拽后端，也可以自定义 touch、mouse 事件模拟的后端实现，后端主要用来抹平浏览器差异，处理 DOM 事件，同时把 DOM 事件转换为 React DnD 内部的 redux action
+
+可以理解为具体拖拽的事件的实现方法
+
+- 移动端主要为 `dragstart`，`selectstart`，`dragenter`，`dragover` 和  `dragend` 的实现
+
+https://github.com/react-dnd/react-dnd/blob/main/packages/backend-html5/src/HTML5BackendImpl.ts
+
+- 移动端主要为 `move`，`start`，`end`，`contextmenu` 和  `keydown` 的实现
+
+https://github.com/react-dnd/react-dnd/blob/e8bd6436548d96f6d6594f763752f424c2e0834b/packages/backend-touch/src/TouchBackendImpl.ts
+
+dnd 后端可以使用官方的提供的两个 HTML5Backend or TouchBackend，或者也可以自己写backend后端
+
+## Item
+React DnD 基于数据驱动，当拖放发生时，它用一个数据对象来描述当前的元素，比如 { cardId: 25 }
+
+## Type
+类型是唯一标识应用程序中整个项目类别的字符串（或符号），类似于 redux 里面的 actions types 枚举常量。
+
+## Monitors
+
+拖放操作都是有状态的，React DnD 通过 Monitor 来存储这些状态并且提供查询
+
+## Connectors
+
+Backend 关注 DOM 事件，组件关注拖放状态，connector 可以连接组件和 Backend ，可以让 Backend 获取到 DOM。
+
+## useDrag
+
+用于将当前组件用作拖动源的钩子
+
+## useDrop
+使用当前组件作为放置目标的钩子
+
+## useDragLayer
+
+用于将当前组件用作拖动层的钩子
+
+inport style from './style.ts'
+
+div className={style.xxxx}
