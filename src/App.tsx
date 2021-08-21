@@ -7,15 +7,19 @@ import { getEmptyImage } from 'react-dnd-html5-backend';
 
 const Box = () => {
     const style: CSSProperties = {
-        width: 200,
+        width: '100%',
         height: 50,
         lineHeight: '50px',
         background: 'pink',
-        margin: '30px auto'
+        // margin: '30px auto'
     }
     // 使用 useDrag
     const [, drager, previewRef] = useDrag({
         type: 'Box',
+        end: (item, monitor) => {
+            const dropResult = monitor.getDropResult();
+            console.log(dropResult);
+        },
     })
     useEffect(() => {
         // 断开拖拽图层与原图层的联系，使原图层不会跟随鼠标拖动
@@ -40,15 +44,15 @@ const layerStyles: CSSProperties = {
 function getItemStyles(
     initialOffset: XYCoord | null,
     currentOffset: XYCoord | null,
+    mouseOffset: XYCoord | null,
 ): CSSProperties {
-    if (!initialOffset || !currentOffset) {
+    if (!initialOffset || !currentOffset || !mouseOffset) {
         return {
             display: "none"
         };
     }
 
-    // const { x, y } = initialOffset
-    const { x, y } = currentOffset;
+    const { x, y } = mouseOffset;
 
     const transform = `translate(${x}px, ${y}px)`;
     return {
@@ -63,23 +67,23 @@ export const CustomDragLayer: FC = () => {
         isDragging,
         initialOffset,
         currentOffset,
-        delta
+        delta,
+        mouseOffset,
     } = useDragLayer((monitor) => {
         return {
             item: monitor.getItem(),
             itemType: monitor.getItemType(),
             initialOffset: monitor.getInitialSourceClientOffset(),
             currentOffset: monitor.getSourceClientOffset(),
+            mouseOffset: monitor.getClientOffset(),
             delta: monitor.getDifferenceFromInitialOffset(),
             isDragging: monitor.isDragging()
         };
     });
 
-    console.log('initialOffset', initialOffset, 'currentOffset', currentOffset, 'delta', delta);
-
     return (
         <div className="drag-layer" data-is-dragging={isDragging} style={{ ...layerStyles, display: isDragging ? 'block' : 'none' }}>
-            <div style={getItemStyles(initialOffset, currentOffset)}>
+            <div style={getItemStyles(initialOffset, currentOffset, mouseOffset)}>
                 <PreviewHolder />
             </div>
         </div>
@@ -87,30 +91,34 @@ export const CustomDragLayer: FC = () => {
 };
 
 
-// const Dustbin = () => {
-//     const style: CSSProperties = {
-//         width: 400,
-//         height: 400,
-//         margin: '100px auto',
-//         lineHeight: '60px',
-//         border: '1px dashed black'
-//     }
-//     // 第一个参数是 collect 方法返回的对象，第二个参数是一个 ref 值，赋值给 drop 元素
-//     const [collectProps, droper] = useDrop({
-//         // accept 是一个标识，需要和对应的 drag 元素中 item 的 type 值一致，否则不能感应
-//         accept: 'Box',
-//         // collect 函数，返回的对象会成为 useDrop 的第一个参数，可以在组件中直接进行使用
-//         collect: (minoter) => ({
-//             isOver: minoter.isOver()
-//         })
-//     })
-//     const bg = collectProps.isOver ? 'deeppink' : 'white';
-//     const content = collectProps.isOver ? '快松开，放到碗里来' : '将 Box 组件拖动到这里'
-//     return (
-//         // 将 droper 赋值给对应元素的 ref
-//         <div ref={droper} style={{ ...style, background: bg }}>{content}</div>
-//     )
-// }
+const Dustbin = () => {
+    const style: CSSProperties = {
+        width: 400,
+        height: 400,
+        margin: '100px auto',
+        lineHeight: '60px',
+        border: '1px dashed black'
+    }
+    // 第一个参数是 collect 方法返回的对象，第二个参数是一个 ref 值，赋值给 drop 元素
+    const [collectProps, droper] = useDrop({
+        // accept 是一个标识，需要和对应的 drag 元素中 item 的 type 值一致，否则不能感应
+        accept: 'Box',
+        // collect 函数，返回的对象会成为 useDrop 的第一个参数，可以在组件中直接进行使用
+        collect: (minoter) => ({
+            isOver: minoter.isOver()
+        }),
+        drop(item, monitor) {
+            console.log(item);
+            return { name: 'AAA' }
+        },
+    })
+    const bg = collectProps.isOver ? 'deeppink' : 'white';
+    const content = collectProps.isOver ? '快松开，放到碗里来' : '将 Box 组件拖动到这里'
+    return (
+        // 将 droper 赋值给对应元素的 ref
+        <div ref={droper} style={{ ...style, background: bg }}>{content}</div>
+    )
+}
 
 export const App = () => {
     return (
@@ -118,7 +126,7 @@ export const App = () => {
             <DndProvider backend={HTML5Backend}>
                 <CustomDragLayer />
                 <Box />
-                {/* <Dustbin /> */}
+                <Dustbin />
             </DndProvider>
         </div>
     );

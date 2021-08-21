@@ -14,7 +14,7 @@ const PreviewHolder = (): JSX.Element => {
                     <span className="universe-icon" style={{ fontSize: '28px' }}>
                         <svg
                             width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path fill-rule="evenodd" clip-rule="evenodd"
+                            <path fillRule="evenodd" clipRule="evenodd"
                                 d="M4 2.5C4 1.94772 4.44772 1.5 5 1.5H14.8608C14.9949 1.5 15.1234 1.55387 15.2174 1.64951L19.8566 6.36941C19.9485 6.46292 20 6.58879 20 6.7199V21.5C20 22.0523 19.5523 22.5 19 22.5H5C4.44772 22.5 4 22.0523 4 21.5V2.5Z"
                                 fill="#3370FF"></path>
                             <path
