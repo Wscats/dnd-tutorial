@@ -24,7 +24,10 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "lint": "eslint src --ext .ts,.tsx,.js,.jsx --fix",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "lint:check": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -43,5 +46,19 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "keywords": [
+    "dnd",
+    "tutorial"
+  ],
+  "author": "wscats (https://github.com/wscats)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wscats/dnd-tutorial.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wscats/dnd-tutorial/issues"
+  },
+  "homepage": "https://github.com/wscats/dnd-tutorial#readme"
 }
