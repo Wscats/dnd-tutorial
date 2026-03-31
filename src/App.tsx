@@ -1,33 +1,32 @@
 import React, { CSSProperties, FC, useEffect } from 'react';
-import { DndProvider, useDrag, useDrop } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
-import { XYCoord, useDragLayer, useDragDropManager } from "react-dnd";
+import { DndProvider, useDrag, useDrop } from 'react-dnd';
+import { HTML5Backend, getEmptyImage } from 'react-dnd-html5-backend';
+import { XYCoord, useDragLayer } from 'react-dnd';
 import PreviewHolder from './PreviewHolder';
-import { getEmptyImage } from 'react-dnd-html5-backend';
 
+/** Draggable box component. */
 const Box = () => {
     const style: CSSProperties = {
         width: '100%',
         height: 50,
         lineHeight: '50px',
         background: 'pink',
-        // margin: '30px auto'
     }
-    // 使用 useDrag
     const [, drager, previewRef] = useDrag({
         type: 'Box',
-        end: (item, monitor) => {
+        end: (_item, monitor) => {
             const dropResult = monitor.getDropResult();
-            console.log(dropResult);
+            if (dropResult) {
+                console.log('Dropped on:', dropResult);
+            }
         },
     })
     useEffect(() => {
-        // 断开拖拽图层与原图层的联系，使原图层不会跟随鼠标拖动
+        // Disconnect the drag preview from the default browser drag image
         previewRef(getEmptyImage(), { captureDraggingState: true });
-    }, []);
+    }, [previewRef]);
     return (
-        // 将第二个参数赋值给 ref
-        <div ref={drager} style={style}>可拖拽组件 Box</div>
+        <div ref={drager} style={style}>Draggable Box</div>
     )
 }
 
@@ -61,25 +60,22 @@ function getItemStyles(
     };
 }
 
+/** Custom drag layer for rendering drag preview. */
 export const CustomDragLayer: FC = () => {
-
     const {
         isDragging,
         initialOffset,
         currentOffset,
-        delta,
         mouseOffset,
-    } = useDragLayer((monitor) => {
-        return {
-            item: monitor.getItem(),
-            itemType: monitor.getItemType(),
-            initialOffset: monitor.getInitialSourceClientOffset(),
-            currentOffset: monitor.getSourceClientOffset(),
-            mouseOffset: monitor.getClientOffset(),
-            delta: monitor.getDifferenceFromInitialOffset(),
-            isDragging: monitor.isDragging()
-        };
-    });
+    } = useDragLayer((monitor) => ({
+        item: monitor.getItem(),
+        itemType: monitor.getItemType(),
+        initialOffset: monitor.getInitialSourceClientOffset(),
+        currentOffset: monitor.getSourceClientOffset(),
+        mouseOffset: monitor.getClientOffset(),
+        delta: monitor.getDifferenceFromInitialOffset(),
+        isDragging: monitor.isDragging(),
+    }));
 
     return (
         <div className="drag-layer" data-is-dragging={isDragging} style={{ ...layerStyles, display: isDragging ? 'block' : 'none' }}>
@@ -91,31 +87,27 @@ export const CustomDragLayer: FC = () => {
 };
 
 
+/** Drop target component. */
 const Dustbin = () => {
     const style: CSSProperties = {
         width: 400,
         height: 400,
         margin: '100px auto',
         lineHeight: '60px',
-        border: '1px dashed black'
+        border: '1px dashed black',
     }
-    // 第一个参数是 collect 方法返回的对象，第二个参数是一个 ref 值，赋值给 drop 元素
     const [collectProps, droper] = useDrop({
-        // accept 是一个标识，需要和对应的 drag 元素中 item 的 type 值一致，否则不能感应
         accept: 'Box',
-        // collect 函数，返回的对象会成为 useDrop 的第一个参数，可以在组件中直接进行使用
-        collect: (minoter) => ({
-            isOver: minoter.isOver()
+        collect: (monitor) => ({
+            isOver: monitor.isOver(),
         }),
-        drop(item, monitor) {
-            console.log(item);
-            return { name: 'AAA' }
+        drop(_item, _monitor) {
+            return { name: 'AAA' };
         },
     })
     const bg = collectProps.isOver ? 'deeppink' : 'white';
-    const content = collectProps.isOver ? '快松开，放到碗里来' : '将 Box 组件拖动到这里'
+    const content = collectProps.isOver ? 'Release to drop here' : 'Drag the Box component here';
     return (
-        // 将 droper 赋值给对应元素的 ref
         <div ref={droper} style={{ ...style, background: bg }}>{content}</div>
     )
 }
